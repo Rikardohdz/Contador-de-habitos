@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mis Actividades</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior-y: none;
+        }
+        
+        .activity-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); color: #0f172a; }
+            100% { transform: scale(1); }
+        }
+        .pop-anim {
+            animation: pop 0.3s ease-out;
+        }
+
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="text-slate-900 min-h-screen flex justify-center antialiased">
+
+    <div class="w-full max-w-md p-6 flex flex-col min-h-screen relative z-10">
+        
+        <header class="mt-12 mb-8 text-center relative">
+            <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-40 h-40 bg-blue-100/60 blur-3xl rounded-full z-0 pointer-events-none"></div>
+            
+            <h1 class="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-slate-900 to-slate-600 relative z-10">
+                Hábitos
+            </h1>
+        </header>
+
+        <main id="activities-container" class="flex flex-col gap-4 flex-grow z-10 pb-10">
+            <!-- Los botones se generarán aquí -->
+        </main>
+    </div>
+
+    <script>
+        const activities = [
+            { id: 'escribir', name: 'Escribir', icon: 'ph-fill ph-pen-nib', gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/30' },
+            { id: 'cardio', name: 'Cardio', icon: 'ph-fill ph-heartbeat', gradient: 'from-rose-500 to-red-600', shadow: 'shadow-rose-500/30' },
+            { id: 'gimnasio', name: 'Gimnasio', icon: 'ph-fill ph-barbell', gradient: 'from-amber-400 to-orange-500', shadow: 'shadow-orange-500/30' },
+            { id: 'leer', name: 'Leer', icon: 'ph-fill ph-book-open-text', gradient: 'from-emerald-400 to-teal-500', shadow: 'shadow-emerald-500/30' },
+            { id: 'guitarra', name: 'Guitarra', icon: 'ph-fill ph-guitar', gradient: 'from-purple-500 to-fuchsia-500', shadow: 'shadow-purple-500/30' }
+        ];
+
+        // 1. Intentamos recuperar los datos del teléfono (Local Storage)
+        let counts = { escribir: 0, cardio: 0, gimnasio: 0, leer: 0, guitarra: 0 };
+        const savedData = localStorage.getItem('misHabitosDatos');
+        
+        if (savedData) {
+            // Si hay datos guardados, los cargamos
+            counts = JSON.parse(savedData);
+        }
+
+        // Función para guardar los datos en el teléfono cada vez que cambian
+        function saveLocally() {
+            localStorage.setItem('misHabitosDatos', JSON.stringify(counts));
+        }
+
+        function updateDisplay(id) {
+            const numEl = document.getElementById(`count-${id}`);
+            if (numEl) {
+                numEl.innerText = counts[id];
+                numEl.classList.remove('pop-anim');
+                void numEl.offsetWidth; 
+                numEl.classList.add('pop-anim');
+            }
+        }
+
+        // Cada vez que modificamos, actualizamos pantalla y guardamos en el teléfono
+        function addCount(id) { counts[id]++; updateDisplay(id); saveLocally(); }
+        function subtractCount(id) { if (counts[id] > 0) { counts[id]--; updateDisplay(id); saveLocally(); } }
+        function resetCount(id) { counts[id] = 0; updateDisplay(id); saveLocally(); }
+
+        function bindPressEvents(element, id) {
+            let subtractTimer;
+            let resetTimer;
+            let isDragging = false;
+            let startY = 0;
+            let actionTaken = false;
+
+            const start = (e) => {
+                if(e.type === 'touchstart') startY = e.touches[0].clientY;
+                isDragging = false;
+                actionTaken = false;
+                
+                element.style.transform = 'scale(0.96)';
+                element.style.backgroundColor = '#f1f5f9';
+                
+                subtractTimer = setTimeout(() => {
+                    if(!isDragging) {
+                        subtractCount(id);
+                        if (navigator.vibrate) navigator.vibrate([50, 50, 50]); 
+                        actionTaken = true;
+                    }
+                }, 500);
+
+                resetTimer = setTimeout(() => {
+                    if(!isDragging) {
+                        resetCount(id);
+                        if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+                        element.style.backgroundColor = '#fee2e2';
+                        setTimeout(() => { element.style.backgroundColor = '#f1f5f9'; }, 300);
+                    }
+                }, 3000); 
+            };
+
+            const move = (e) => {
+                if(e.type === 'touchmove') {
+                    const currentY = e.touches[0].clientY;
+                    if (Math.abs(currentY - startY) > 10) {
+                        isDragging = true;
+                        clearTimeout(subtractTimer);
+                        clearTimeout(resetTimer);
+                        element.style.transform = 'scale(1)';
+                        element.style.backgroundColor = '';
+                    }
+                }
+            };
+
+            const end = (e) => {
+                clearTimeout(subtractTimer);
+                clearTimeout(resetTimer);
+                element.style.transform = 'scale(1)';
+                element.style.backgroundColor = '';
+                
+                if (actionTaken) {
+                    if(e.cancelable) e.preventDefault(); 
+                } else if (!isDragging) {
+                    addCount(id);
+                    if (navigator.vibrate) navigator.vibrate(20); 
+                }
+            };
+
+            element.addEventListener('mousedown', start);
+            element.addEventListener('touchstart', start, {passive: true});
+            element.addEventListener('touchmove', move, {passive: true});
+            element.addEventListener('mouseup', end);
+            element.addEventListener('touchend', end);
+            element.addEventListener('mouseleave', () => { 
+                clearTimeout(subtractTimer);
+                clearTimeout(resetTimer);
+                element.style.transform = 'scale(1)';
+                element.style.backgroundColor = ''; 
+            });
+            element.addEventListener('contextmenu', e => { e.preventDefault(); return false; });
+        }
+
+        function renderActivities() {
+            const container = document.getElementById('activities-container');
+            container.innerHTML = ''; 
+
+            activities.forEach(act => {
+                const card = document.createElement('div');
+                card.className = `activity-card relative overflow-hidden flex items-center justify-between p-5 rounded-3xl bg-white border border-slate-100 cursor-pointer hover:bg-slate-50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]`;
+                
+                card.innerHTML = `
+                    <div class="flex items-center gap-5 relative z-10">
+                        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${act.gradient} ${act.shadow} shadow-lg flex items-center justify-center text-3xl text-white">
+                            <i class="${act.icon}"></i>
+                        </div>
+                        <div class="flex flex-col">
+                            <span class="text-xl font-bold text-slate-800">${act.name}</span>
+                        </div>
+                    </div>
+                    <div id="count-${act.id}" class="text-5xl font-semibold tracking-tighter text-slate-800 min-w-[3rem] text-right relative z-10">
+                        ${counts[act.id]}
+                    </div>
+                `;
+
+                bindPressEvents(card, act.id);
+                container.appendChild(card);
+            });
+        }
+
+        // Renderizamos inicialmente
+        renderActivities();
+    </script>
+</body>
+</html>
