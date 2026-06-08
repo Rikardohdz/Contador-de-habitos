@@ -24,6 +24,7 @@
             user-select: none;
             -webkit-tap-highlight-color: transparent;
             overscroll-behavior-y: none;
+            touch-action: pan-y; /* Ayuda a que los pointer events funcionen mejor en móviles */
         }
         
         .activity-card {
@@ -95,8 +96,8 @@
             }
         }
 
-        // Cada vez que modificamos, actualizamos pantalla y guardamos en el teléfono
-        function addCount(id) { counts[id] += 2; updateDisplay(id); saveLocally(); }
+        // Corregido: Vuelve a sumar de 1 en 1
+        function addCount(id) { counts[id]++; updateDisplay(id); saveLocally(); }
         function subtractCount(id) { if (counts[id] > 0) { counts[id]--; updateDisplay(id); saveLocally(); } }
         function resetCount(id) { counts[id] = 0; updateDisplay(id); saveLocally(); }
 
@@ -107,8 +108,16 @@
             let startY = 0;
             let actionTaken = false;
 
+            // Función centralizada para limpiar los temporizadores
+            const cancelTimers = () => {
+                clearTimeout(subtractTimer);
+                clearTimeout(resetTimer);
+                element.style.transform = 'scale(1)';
+                element.style.backgroundColor = '';
+            };
+
             const start = (e) => {
-                if(e.type === 'touchstart') startY = e.touches[0].clientY;
+                startY = e.clientY;
                 isDragging = false;
                 actionTaken = false;
                 
@@ -134,23 +143,15 @@
             };
 
             const move = (e) => {
-                if(e.type === 'touchmove') {
-                    const currentY = e.touches[0].clientY;
-                    if (Math.abs(currentY - startY) > 10) {
-                        isDragging = true;
-                        clearTimeout(subtractTimer);
-                        clearTimeout(resetTimer);
-                        element.style.transform = 'scale(1)';
-                        element.style.backgroundColor = '';
-                    }
+                const currentY = e.clientY;
+                if (Math.abs(currentY - startY) > 10) {
+                    isDragging = true;
+                    cancelTimers();
                 }
             };
 
             const end = (e) => {
-                clearTimeout(subtractTimer);
-                clearTimeout(resetTimer);
-                element.style.transform = 'scale(1)';
-                element.style.backgroundColor = '';
+                cancelTimers();
                 
                 if (actionTaken) {
                     if(e.cancelable) e.preventDefault(); 
@@ -160,17 +161,12 @@
                 }
             };
 
-            element.addEventListener('mousedown', start);
-            element.addEventListener('touchstart', start, {passive: true});
-            element.addEventListener('touchmove', move, {passive: true});
-            element.addEventListener('mouseup', end);
-            element.addEventListener('touchend', end);
-            element.addEventListener('mouseleave', () => { 
-                clearTimeout(subtractTimer);
-                clearTimeout(resetTimer);
-                element.style.transform = 'scale(1)';
-                element.style.backgroundColor = ''; 
-            });
+            // CORRECCIÓN CLAVE: Usar "Pointer Events" previene que los celulares cuenten doble
+            element.addEventListener('pointerdown', start);
+            element.addEventListener('pointermove', move);
+            element.addEventListener('pointerup', end);
+            element.addEventListener('pointerleave', cancelTimers);
+            element.addEventListener('pointercancel', cancelTimers);
             element.addEventListener('contextmenu', e => { e.preventDefault(); return false; });
         }
 
