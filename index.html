@@ -96,7 +96,7 @@
         }
 
         // Cada vez que modificamos, actualizamos pantalla y guardamos en el teléfono
-        function addCount(id) { counts[id]++; updateDisplay(id); saveLocally(); }
+        function addCount(id) { counts[id] += 2; updateDisplay(id); saveLocally(); }
         function subtractCount(id) { if (counts[id] > 0) { counts[id]--; updateDisplay(id); saveLocally(); } }
         function resetCount(id) { counts[id] = 0; updateDisplay(id); saveLocally(); }
 
